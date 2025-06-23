@@ -7,11 +7,17 @@ import cors from "cors";
 
 export const app = express();
 
+const allowedOrigins=[
+  process.env.FRONTEND_URI1,
+  process.env.FRONTEND_URI2,
+  process.env.FRONTEND_URI3
+]
+
 //Using middleware
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-  origin:[process.env.FRONTEND_URI],
+  origin:allowedOrigins,
   methods:["GET","POST","PUT","DELETE"],
   credentials:true
 }));
