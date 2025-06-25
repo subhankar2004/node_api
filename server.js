@@ -1,12 +1,20 @@
-import { app } from "./app.js";
 //DB should be connected inside server and middlewares should be used inside app
 import dotenv from "dotenv";
-import { connectDB } from "./data/db.js";
-
-//connecton to database
 dotenv.config({
     path: "./data/config.env",
 });
+
+// console.log("🔍 Environment Variables Debug:");
+// console.log("CLOUDINARY_NAME:", process.env.CLOUDINARY_NAME);
+// console.log("CLOUDINARY_API_KEY:", process.env.CLOUDINARY_API_KEY);
+// console.log("CLOUDINARY_API_SECRET:", process.env.CLOUDINARY_API_SECRET);
+// console.log("All env vars loaded:", Object.keys(process.env).filter(key => key.startsWith('CLOUDINARY')));
+
+import { app } from "./app.js";
+import { connectDB } from "./data/db.js";
+
+//connecton to database
+
 connectDB();
 
 app.listen(process.env.PORT || 5000, () => {

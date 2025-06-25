@@ -1,6 +1,9 @@
 import express from "express";
 import userRouter from "./routes/user.route.js";
 import taskRouter from "./routes/task.route.js";
+import returnRouter from "./routes/return.route.js";
+import orderRouter from "./routes/order.route.js";
+import adminRouter from "./routes/admin.route.js";
 import cookieParser from "cookie-parser";
 import { errorMiddleware } from "./middleware/error.js";
 import cors from "cors";
@@ -24,6 +27,9 @@ app.use(cors({
 
 //using Router
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/returns",returnRouter);
+app.use("/api/v1/orders",orderRouter);
+app.use("/api/v1/admin",adminRouter);
 app.use("/api/v1/tasks", taskRouter);
 
 
