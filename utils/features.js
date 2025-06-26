@@ -18,3 +18,4 @@ export const sendCookie=(user,res,message,statusCode=200)=>{
       user,
     });
 }
+
