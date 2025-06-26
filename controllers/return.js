@@ -34,7 +34,7 @@ export const newReturnRequest = async (req, res) => {
 
         // Call the Flask endpoint for risk predictor
         const MLresponse = await axios.post(
-            "https://731b-34-125-130-161.ngrok-free.app/return",
+            "https://6220-35-186-183-151.ngrok-free.app/return",
             formData,
             {
                 headers: {
@@ -94,3 +94,142 @@ export const newReturnRequest = async (req, res) => {
         });
     }
 };
+
+export const getUserReturnRequests=async(req,res)=>{
+    try {
+        const userId=req.user._id;
+        const returns=await Return.find({user:userId}).populate("order");;
+        res.status(200).json({
+            success:true,
+            returns
+        })
+
+
+        
+    } catch (error) {
+        console.log("Error in getUserReturnREquests:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+}
+
+export const getReturnRequestById=async(req,res)=>{
+    try {
+        const {id}=req.params; //id of return order
+        const returnOrder=await Return.findById(id).populate("order");
+        if(!returnOrder){
+            return res.status(404).json({
+                success:false,
+                message:"Return Order Not Found"
+            })
+        }
+        if (returnOrder.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied. You can only view your own returns."
+            });
+        }
+        res.status(200).json({
+            success:true,
+            returnOrder
+        })
+
+
+    } catch (error) {
+        console.log("Error in getReturnRequestById:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+}
+
+export const updateReturnStatus=async(req,res)=>{
+    try {
+        const {id}=req.params; //id of return order
+        const {status,notes,refundAmount,refundReason}=req.body;
+        const validStatuses = ["Initiated", "Approved", "Pending Review", "Rejected", "Refunded"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid status. Valid statuses are: pending, approved, rejected, processed, refunded"
+            });
+        }
+
+        const returnOrder=await Return.findById(id);
+        if(!returnOrder){
+            return res.status(404).json({
+                success:false,
+                message:"Return Order Not Found"
+            })
+        }
+        console.log(req.user);
+        if (returnOrder.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied. You can only update your own returns."
+            });
+        }
+        const updateData = {
+            status,
+            updatedAt: new Date(),
+            updatedBy: req.user.id
+        };
+        if (status === 'Initiated' && notes) updateData.approvalNotes = notes;
+        if (status === 'Rejected' && reason) updateData.rejectionReason = reason;
+        if (status === 'Approved' && notes) updateData.processingNotes = notes;
+        if (status === 'Refunded') {
+            if (refundAmount) updateData.refundAmount = refundAmount;
+            if (refundMethod) updateData.refundMethod = refundMethod;
+            updateData.refundDate = new Date();
+        }
+        await returnOrder.save();
+        res.status(200).json({
+            success:true,
+            message:"Return Status Updated Successfully!!",
+            returnOrder
+        })
+    } catch (error) {
+        console.log("Error in updateReturnStatus:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+}
+
+export const cancelReturnRequest=async(req,res)=>{
+    try {
+        const {id}=req.params; //id of return order
+        const returnOrder=await Return.findById(id);
+        if(!returnOrder){
+            return res.status(404).json({
+                success:false,
+                message:"Return Order Not Found"
+            })
+        }
+        if (returnOrder.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: "Access denied. You can only cancel your own returns."
+            });
+        }
+        await returnOrder.deleteOne();
+        res.status(200).json({
+            success:true,
+            message:"Return Request Cancelled Successfully!!"
+        })
+    } catch (error) {
+        console.log("Error in cancelReturnRequest:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+}

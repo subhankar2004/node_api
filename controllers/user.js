@@ -28,18 +28,20 @@ export const getUserById = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password,role } = req.body;
   console.log(name, email, password);
 
-  await User.create({
+  const user=await User.create({
     name,
     email,
     password,
+    role
   });
 
   res.status(201).cookie("token", "token").json({
     success: true,
     message: "Registered Successfully",
+    user,
   });
 };
 
@@ -67,7 +69,7 @@ export const deleteUser=async(req,res)=>{
 }
 
 export const register=async (req,res)=>{
-  const {name,email,password}=req.body;
+  const {name,email,password,role}=req.body;
 
   const user=await User.findOne({email});
   if(user){
@@ -76,13 +78,14 @@ export const register=async (req,res)=>{
       message:"User Already Exists"
     })
   }
-
+ 
   const hashedPassword=await bcrypt.hash(password,10);
 
   const newUser=await User.create({
     name,
     email,
-    password:hashedPassword
+    password:hashedPassword,
+    role
   })
 
   sendCookie(newUser,res,"Registered Successfully",201);

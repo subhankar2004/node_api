@@ -30,9 +30,23 @@ const returnSchema=new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["Initiated", "Pending Review", "Approved", "Rejected"],
-    default: "Initiated",
+    enum: ["Initiated", "Pending Review", "Approved", "Rejected", "Refunded"],
+    default: "Pending Review",
   },
+  notes:{
+    type:String
+  },
+  refundAmount: Number,
+  refundMethod: String,
+  refundDate: Date,
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt:{
+    type:Date,
+    default:Date.now
+  }
 });
 
 export const Return=mongoose.model("Return",returnSchema);
