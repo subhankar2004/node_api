@@ -9,24 +9,29 @@ export const newReturnRequest = async (req, res) => {
     try {
         const { orderId, reason, deliveryCount, returnDelayDays } = req.body;
         const userId = req.user._id;
-
-        // Checking if image exists or not
-        if (!req.file) {
+        
+        // Check if both images exist
+        if (!req.files || !req.files.user_image || !req.files.warehouse_image) {
             return res.status(400).json({
                 success: false,
-                message: "Image is required"
+                message: "Both user_image and warehouse_image are required"
             });
         }
 
-        const filePath = req.file.path;
+        const userImagePath = req.files.user_image[0].path;
+        const warehouseImagePath = req.files.warehouse_image[0].path;
 
-        // Upload to cloudinary FIRST
-        const uploadResult = await uploadImage(filePath);
-        const imageUrl = uploadResult.secure_url;
+        // Upload both images to cloudinary FIRST
+        const userImageUpload = await uploadImage(userImagePath);
+        const warehouseImageUpload = await uploadImage(warehouseImagePath);
+        
+        const userImageUrl = userImageUpload.secure_url;
+        const warehouseImageUrl = warehouseImageUpload.secure_url;
 
-        // Prepare form data for ML API call BEFORE deleting the file
+        // Prepare form data for ML API call BEFORE deleting the files
         const formData = new FormData();
-        formData.append('image', fs.createReadStream(filePath));
+        formData.append('user_image', fs.createReadStream(userImagePath));
+        formData.append('warehouse_image', fs.createReadStream(warehouseImagePath));
         formData.append('json', JSON.stringify({
             number_of_deliveries: deliveryCount,
             return_delay_days: returnDelayDays,
@@ -39,16 +44,18 @@ export const newReturnRequest = async (req, res) => {
             {
                 headers: {
                     ...formData.getHeaders(),
-                    "ngrok-skip-browser-warning": "true" // Add this for ngrok
+                    "ngrok-skip-browser-warning": "true"
                 }
             }
         );
 
-        // NOW remove local files after both uploads are complete
-        fs.unlink(filePath, (err) => {
-            if (err) {
-                console.log("Error deleting local file:", err);
-            }
+        // NOW remove local files after all uploads are complete
+        fs.unlink(userImagePath, (err) => {
+            if (err) console.log("Error deleting user image file:", err);
+        });
+        
+        fs.unlink(warehouseImagePath, (err) => {
+            if (err) console.log("Error deleting warehouse image file:", err);
         });
 
         const {
@@ -63,7 +70,8 @@ export const newReturnRequest = async (req, res) => {
             user: userId,
             order: orderId,
             reason,
-            imageUrl,
+            imageUrl: userImageUrl, // You might want to store both URLs
+            warehouseImageUrl: warehouseImageUrl, // Add this field to your schema if needed
             blurScore: blur_score,
             ssimScore: ssim_score,
             metadataScore: metadata_score,
@@ -80,13 +88,20 @@ export const newReturnRequest = async (req, res) => {
     } catch (error) {
         console.log("Error in newReturnRequest:", error);
         
-        // Clean up file if it exists and there was an error
-        if (req.file && req.file.path) {
-            fs.unlink(req.file.path, (err) => {
-                if (err) console.log("Error cleaning up file:", err);
-            });
+        // Clean up files if they exist and there was an error
+        if (req.files) {
+            if (req.files.user_image && req.files.user_image[0].path) {
+                fs.unlink(req.files.user_image[0].path, (err) => {
+                    if (err) console.log("Error cleaning up user image file:", err);
+                });
+            }
+            if (req.files.warehouse_image && req.files.warehouse_image[0].path) {
+                fs.unlink(req.files.warehouse_image[0].path, (err) => {
+                    if (err) console.log("Error cleaning up warehouse image file:", err);
+                });
+            }
         }
-
+        
         res.status(500).json({
             success: false,
             message: "Internal Server Error",

@@ -7,7 +7,10 @@ import { isAdmin } from "../middleware/isAdmin.js";
 
 const router = express.Router();
 
-router.post("/new",isAuth,upload.single("image"),newReturnRequest);
+router.post("/new", isAuth, upload.fields([
+    { name: 'user_image', maxCount: 1 },
+    { name: 'warehouse_image', maxCount: 1 }
+]), newReturnRequest);
 router.get("/user",isAuth,getUserReturnRequests)
 router.get("/:id",isAuth,getReturnRequestById);
 router.put("/:id/status",isAuth,isAdmin,updateReturnStatus);
