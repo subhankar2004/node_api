@@ -34,7 +34,7 @@ export const newReturnRequest = async (req, res) => {
 
         // Call the Flask endpoint for risk predictor
         const MLresponse = await axios.post(
-            "https://6220-35-186-183-151.ngrok-free.app/return",
+            "https://flask-return-api.onrender.com/return",
             formData,
             {
                 headers: {
