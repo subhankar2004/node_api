@@ -248,3 +248,35 @@ export const cancelReturnRequest=async(req,res)=>{
         });
     }
 }
+
+export const getReturnStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const returnRequest = await Return.findOne({ _id: id, user: userId });
+
+    if (!returnRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Return request not found or access denied",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      status: returnRequest.status,
+      refundAmount: returnRequest.refundAmount,
+      adminMessage: returnRequest.adminMessage,
+      updatedAt: returnRequest.updatedAt,
+    });
+
+  } catch (error) {
+    console.error("Error in getReturnStatus:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};

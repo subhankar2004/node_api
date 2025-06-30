@@ -362,3 +362,107 @@ export const getFraudAlerts=async(req,res)=>{
         })
     }
 }
+
+export const logout=(req,res)=>{
+    res.status(200).cookie("token","",{expires:new Date(Date.now())}).json({
+        success:true,
+        message:"Logout Successfully"
+    })
+}
+
+
+
+export const getReturnById = async (req, res) => {
+  try {
+    const returnId = req.params.id;
+
+    const returnRequest = await Return.findById(returnId)
+      .populate("user", "name email")
+      .populate("order"); // if you want order details
+
+    if (!returnRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Return request not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      return: returnRequest,
+    });
+  } catch (error) {
+    console.error("Error in getReturnById:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+import qrcode from "qrcode";
+
+export const updateReturnRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { riskLevel, action, refundAmount, status } = req.body;
+
+    // Validate enum status input
+    const validStatuses = ["Approved", "Rejected", "Refunded"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be one of: Approved, Rejected, Refunded",
+      });
+    }
+
+    const returnRequest = await Return.findById(id);
+    if (!returnRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Return request not found",
+      });
+    }
+
+    let message = "";
+    let qrCodeUrl = "";
+
+    if (riskLevel === "Low" && status === "Approved") {
+      message = "✅ Your return is approved. Full refund will be processed soon.";
+      qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Refund:₹${refundAmount}`;
+    } else if (riskLevel === "Medium" && status === "Approved") {
+      message = "ℹ️ Partial refund initiated. If there's an issue, please visit your nearest Walmart warehouse.";
+      qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Partial Refund:₹${refundAmount}`;
+    } else if (riskLevel === "High" && status === "Rejected") {
+      message = "❌ Your return is flagged. Please visit the nearest Walmart store for manual inspection.";
+    } else if (status === "Refunded") {
+      message = "💸 Refund has been successfully completed.";
+    } else {
+      message = "⚠️ Action recorded. Please wait for further updates.";
+    }
+
+    returnRequest.status = status;
+    returnRequest.refundAmount = refundAmount;
+    returnRequest.adminMessage = message;
+
+    await returnRequest.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Return request updated successfully.",
+      updatedStatus: status,
+      refundAmount,
+      userMessage: message,
+      qrCodeUrl: qrCodeUrl || null,
+    });
+
+  } catch (error) {
+    console.error("Error in updateReturnRequest:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
